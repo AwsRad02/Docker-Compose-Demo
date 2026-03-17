@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>DevOps Project</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <main class="wrap">
+        <div class="badge"><span class="dot"></span><span>DevOps demo: form → API → MongoDB</span></div>
+        <h1>DevOps Intake <span class="sub">Collect. Validate. Persist. Deploy. Repeat.</span></h1>
+
+        <section class="card">
+            <h2 class="section-title">Submit a record</h2>
+
+            <div class="row">
+                <label>
+                    <span>Name</span>
+                    <input id="name" placeholder="Aws Radaideh" />
+                </label>
+                <label>
+                    <span>Age</span>
+                    <input id="age" type="number" min="1" max="120" placeholder="28" />
+                </label>
+            </div>
+
+            <label class="block">
+                <span>Email</span>
+                <input id="email" type="email" placeholder="awsradaideh@gmail.com" />
+            </label>
+
+            <button class="btn" id="submit">
+                <span class="btn-icon">></span>
+                Submit
+            </button>
+
+            <div id="msg"></div>
+        </section>
+
+        <section class="card">
+            <div class="header-row">
+                <h2 class="section-title">Recent submissions</h2>
+                <span id="count" class="count-badge">0 shown</span>
+            </div>
+
+            <div class="table" id="table">
+                <div class="thead">
+                    <div>Name</div>
+                    <div>Email</div>
+                    <div>Age</div>
+                    <div>Created</div>
+                </div>
+
+                <div id="rows"></div>
+            </div>
+        </section>
+
+    </main>
+    <footer class="footer">
+        <p>Developed by Aws Radaideh</p>
+        <p class="mono">awosradaideh@gmail.com</p>
+    </footer>
+
+    <script>
+        const $ = (id) => document.getElementById(id);
+
+        async function load() {
+            const res = await fetch('/api/records');
+            const data = await res.json();
+
+            $('count').textContent = `${data.length} shown`;
+
+            $('rows').innerHTML = data.map(r => `
+      <div class="trow">
+        <div>${escapeHtml(r.name || '')}</div>
+        <div class="mono">${escapeHtml(r.email || '')}</div>
+        <div>${r.age ?? ''}</div>
+        <div class="mono">${escapeHtml(r.createdAt || '')}</div>
+      </div>
+    `).join('');
+        }
+
+        $('submit').addEventListener('click', async () => {
+
+            $('msg').innerHTML = '';
+
+            const payload = {
+                name: $('name').value.trim(),
+                email: $('email').value.trim(),
+                age: Number($('age').value)
+            };
+
+            try {
+
+                const res = await fetch('/api/records', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+
+                    const txt = await res.text();
+
+                    $('msg').innerHTML =
+                        `<div class="err">Request failed (${res.status}). Fix your inputs.</div>`;
+
+                    console.warn(txt);
+                    return;
+                }
+
+                $('msg').innerHTML = `<div class="ok">Saved to MongoDB ✔</div>`;
+
+                $('name').value = '';
+                $('email').value = '';
+                $('age').value = '';
+
+                await load();
+
+            } catch (e) {
+
+                $('msg').innerHTML =
+                    `<div class="err">Network error. Backend probably sleeping.</div>`;
+            }
+        });
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, m =>
+                ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+
+        load();
+    </script>
+
+</body>
+
+</html>
